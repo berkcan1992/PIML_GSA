@@ -3,7 +3,7 @@
 
 # Author : loic le Gratiet, 2014
 
-sobolGP <- function (
+sobolNN <- function (
 model,  
 type="SK",
 MCmethod="sobol",                                                                                                                                                               
@@ -15,7 +15,9 @@ conf = 0.95,
 sequential = FALSE, 
 candidate = NULL, 
 sequential.tot=FALSE,
-max_iter = 1000
+max_iter = 1000,
+filename="simulateNN_Case1",
+nobs = 10
 ) 
 {
     if(sequential){
@@ -38,7 +40,7 @@ max_iter = 1000
 	  stop("Sequential design for total indices is only available for sobol2002, sobol2007 and soboljansen methods")
 	}
     }
-
+	
     p <- ncol(X1)
 
     S <- list()
@@ -78,10 +80,11 @@ if(MCmethod!="sobol2007"){
 		
 	rm(list=c("Xb"))
 
-	ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
-                            cond=TRUE, checkNames=FALSE, max_iter=1000,type)
-	# ysimu <- simulate(object = model, nsim = nsim,  newdata=X, 
+	# ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
                             # cond=TRUE, checkNames=FALSE, max_iter=1000,type)
+	# m = py_run_file("simulateNN.py")
+        source_python(filename)
+	    ysimu <- pass_arg(X, nsim, nobs)
 	
 	if(MCmethod=="sobol"||MCmethod=="sobol2002"){
 	  	S[[i]] <- sobolpickfreeze(ysimu[,1:(nX/2)] , ysimu[,(nX/2+1):nX],nboot)
@@ -95,7 +98,11 @@ if(MCmethod!="sobol2007"){
 
 	  if(sequential){
 	  	predCov <- predictGP.sobol(object = model, newdata1=data.frame(X), newdata2=data.frame(candidate), type=type, prednewdata1 = FALSE, prednewdata2 = TRUE)
-
+		
+		pred = py_run_file("predictNN.py")
+		predCov$mean2 = pred$means
+		predCov$cov = pred$covarience
+		
 	  	for(k in 1:ncandidate){
 			ynew <- predCov$mean2[k]
 			zsimu <- t(as.matrix(predCov$cov[-c((nX+1):(nX+ncandidate)),k])%*%rep(1,nsim))*(ynew-ysimu[,(nX+k)])/predCov$cov[(nX+k),k]+ysimu[,-c((nX+1):(nX+ncandidate))]
@@ -103,13 +110,13 @@ if(MCmethod!="sobol2007"){
 			if(MCmethod=="sobol"||MCmethod=="sobol2002"){
 	  			Scand <- sobolpickfreeze(zsimu[,1:(nX/2)] , zsimu[,(nX/2+1):nX],nboot=1) 
 			}
+			
 			if(MCmethod=="sobolEff"){
 				Scand <- sobolEffpickfreeze(zsimu[,1:(nX/2)] , zsimu[,(nX/2+1):nX],nboot=1) 
 			}
 			if(MCmethod=="soboljansen"){
 				Scand <- soboljansenpickfreeze(zsimu[,1:(nX/2)] , zsimu[,(nX/2+1):nX],nboot=1) 
 			}
-
 			rm(list=c("zsimu"))
 			Svar[k,i] <- var(Scand)
 			rm(list=c("Scand"))
@@ -238,6 +245,7 @@ if(Tot){
 }
 
     output$S <- S
+	
 	rm(list=c("S"))
 
     if(sequential){
@@ -258,7 +266,7 @@ if(Tot){
 	   }
     }
 
-	class(output) <- "sobolGP"
+	class(output) <- "sobolNN"
 
 	output$S$mean <- matrix(nrow = 1, ncol = p)
 	output$S$var <- matrix(nrow = 1, ncol = p)

@@ -3,7 +3,7 @@
 
 # Author : loic le Gratiet, 2014
 
-sobolGP <- function (
+sobolGP_th <- function (
 model,  
 type="SK",
 MCmethod="sobol",                                                                                                                                                               
@@ -78,13 +78,15 @@ if(MCmethod!="sobol2007"){
 		
 	rm(list=c("Xb"))
 
-	ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
-                            cond=TRUE, checkNames=FALSE, max_iter=1000,type)
-	# ysimu <- simulate(object = model, nsim = nsim,  newdata=X, 
+	# ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
                             # cond=TRUE, checkNames=FALSE, max_iter=1000,type)
+
+	ypred <- predict(object = model, newdata=X, type = type)
+	ypredmean <- ypred$mean
+	ypredsd <- ypred$sd
 	
 	if(MCmethod=="sobol"||MCmethod=="sobol2002"){
-	  	S[[i]] <- sobolpickfreeze(ysimu[,1:(nX/2)] , ysimu[,(nX/2+1):nX],nboot)
+	  	S[[i]] <- sobolpickfreeze(ypredmean[1:(nX/2)] , ypredmean[(nX/2+1):nX],nboot, ypredmean, ypredsd)
 	}
 	if(MCmethod=="sobolEff"){
 		S[[i]] <- sobolEffpickfreeze(ysimu[,1:(nX/2)] , ysimu[,(nX/2+1):nX],nboot)
@@ -116,7 +118,8 @@ if(MCmethod!="sobol2007"){
 	  	}
 		rm(list=c("predCov", "ynew"))
 	  }
-	rm(list=c("ysimu" ))
+	# rm(list=c("ysimu" ))
+	rm(list=c("ypredmean","ypredsd","ypred"))
     }
 
 	
@@ -237,6 +240,7 @@ if(Tot){
 	names(STot) <- namesStot
 }
 
+	print(S)
     output$S <- S
 	rm(list=c("S"))
 
