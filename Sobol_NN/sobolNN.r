@@ -83,9 +83,10 @@ if(MCmethod!="sobol2007"){
 	# ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
                             # cond=TRUE, checkNames=FALSE, max_iter=1000,type)
 	# m = py_run_file("simulateNN.py")
+
         source_python(filename)
 	    ysimu <- pass_arg(X, nsim, nobs)
-	
+	    
 	if(MCmethod=="sobol"||MCmethod=="sobol2002"){
 	  	S[[i]] <- sobolpickfreeze(ysimu[,1:(nX/2)] , ysimu[,(nX/2+1):nX],nboot)
 	}

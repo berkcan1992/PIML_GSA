@@ -243,6 +243,115 @@ def pass_arg(Xx, nsim, nobs):
         return net, x_test, y_test
 
 
+    def train_mc_dropout_Kfold(data, drop_prob, n_splits, num_epochs, num_units, learn_rate, weight_decay, log_every,
+                           num_samples, plot_history=False):
+    
+        kf = KFold(n_splits=n_splits, shuffle=False)
+        in_dim = data.shape[1] - 1
+        train_logliks, test_logliks = [], []
+        train_rmses, test_rmses = [], []
+
+#         if plot_history == True:
+            # avg_history_loss, avg_history_loss_test, avg_history_rmse, avg_history_rmse_test = [], [], [], []
+
+        # # random shuffle data
+        # np.random.shuffle(data)
+
+        for j, idx in enumerate(kf.split(data)):
+
+            if plot_history == True:
+                history_loss, history_loss_test, history_rmse, history_rmse_test = [], [], [], []
+
+            print('FOLD %d:' % j)
+
+            train_index, test_index = idx
+
+            x_train, y_train = data[train_index, :in_dim], data[train_index, in_dim:]
+            x_test, y_test = data[test_index, :in_dim], data[test_index, in_dim:]
+
+            # x_means, x_stds = x_train.mean(axis=0), x_train.var(axis=0) ** 0.5
+            # y_means, y_stds = y_train.mean(axis=0), y_train.var(axis=0) ** 0.5
+
+            net = MC_Dropout_Wrapper(
+                network=MC_Dropout_Model(input_dim=in_dim, output_dim=1, num_units=num_units, drop_prob=drop_prob),
+                learn_rate=learn_rate, batch_size=batch_size, weight_decay=weight_decay)
+
+            # losses = []
+            # fit_loss_train = np.zeros(num_epochs)
+
+            for i in range(num_epochs):
+                loss = net.fit(x_train, y_train)
+
+#                 if plot_history == True:
+#                     # to save loss & rmse at every epoch
+#                     train_loss, rmse_train = net.get_loss_and_rmse(x_train, y_train, num_samples=num_samples)
+#                     rmse_train = rmse_train.cpu().data.numpy()
+
+#                     test_loss, rmse_test = net.get_loss_and_rmse(x_test, y_test, num_samples=num_samples)
+#                     test_loss, rmse_test = test_loss.cpu().data.numpy(), rmse_test.cpu().data.numpy()
+
+                    # history_loss.append(loss.cpu().data.numpy() / len(x_train))
+                    # history_loss_test.append(test_loss / len(x_test))
+                    # history_loss.append(loss.cpu().data.numpy() )
+                    # history_loss_test.append(test_loss )
+                    # history_rmse.append(rmse_train)
+                    # history_rmse_test.append(rmse_test)
+
+                if i % log_every == 0 or i == num_epochs - 1:
+                    train_loss, train_rmse = net.get_loss_and_rmse(x_train, y_train, num_samples=num_samples)
+                    train_loss, train_rmse = train_loss.cpu().data.numpy(), train_rmse.cpu().data.numpy()
+
+                    test_loss, test_rmse = net.get_loss_and_rmse(x_test, y_test, num_samples=num_samples)
+                    test_loss, test_rmse = test_loss.cpu().data.numpy(), test_rmse.cpu().data.numpy()
+
+
+                    print('Epoch: %4d, Train loss: %6.5f Test loss: %6.5f Train RMSE: %.5f Test RMSE: %.5f' %
+                          (i, loss.cpu().data.numpy(), test_loss, train_rmse, test_rmse))
+#             if plot_history == True:
+                # avg_history_loss.append(history_loss)
+                # avg_history_loss_test.append(history_loss_test)
+                # avg_history_rmse.append(history_rmse)
+                # avg_history_rmse_test.append(history_rmse_test)
+
+            train_loss, train_rmse = net.get_loss_and_rmse(x_train, y_train, num_samples=num_samples)
+            test_loss, test_rmse = net.get_loss_and_rmse(x_test, y_test, num_samples=num_samples)
+
+            train_logliks.append(train_loss.cpu().data.numpy() / len(x_train) )
+            test_logliks.append(test_loss.cpu().data.numpy() / len(x_test) )
+
+            train_rmses.append(train_rmse.cpu().data.numpy())
+            test_rmses.append(test_rmse.cpu().data.numpy())
+
+        # if plot_history == True:
+            # # Save plots
+            # legends = ['Train', 'Test']
+            # format = True  # true for pdf, false for pgf
+            # file_name1 = 'Epoch_vs_Loss'
+            # file_name2 = 'Epoch_vs_RMSE'
+
+            # avg_history_loss = np.array(avg_history_loss).mean(axis=0)
+            # avg_history_loss_test = np.array(avg_history_loss_test).mean(axis=0)
+            # avg_history_rmse = np.array(avg_history_rmse).mean(axis=0)
+            # avg_history_rmse_test = np.array(avg_history_rmse_test).mean(axis=0)
+
+            # labels = ['Epoch', 'Loss']
+
+            # x1, y1 = list(range(1, avg_history_loss.shape[0]+1)), avg_history_loss
+            # x2, y2 = list(range(1, avg_history_loss_test.shape[0] + 1)), avg_history_loss_test
+            # sF.save_plot(x1, y1, labels, legends, format, file_name1, x2, y2)
+
+            # x3, y3 = list(range(1, avg_history_rmse.shape[0] + 1)), avg_history_rmse
+            # x4, y4 = list(range(1, avg_history_rmse_test.shape[0] + 1)), avg_history_rmse_test
+            # sF.save_plot(x3, y3, labels, legends, format, file_name2, x4, y4)
+        
+        print('Train log. lik. = %6.5f +/- %6.5f' % (-np.array(train_logliks).mean(), np.array(train_logliks).var() ** 0.5))
+        print('Test  log. lik. = %6.5f +/- %6.5f' % (-np.array(test_logliks).mean(), np.array(test_logliks).var() ** 0.5))
+        print('Train RMSE      = %6.5f +/- %6.5f' % (np.array(train_rmses).mean(), np.array(train_rmses).var() ** 0.5))
+        print('Test  RMSE      = %6.5f +/- %6.5f' % (np.array(test_rmses).mean(), np.array(test_rmses).var() ** 0.5))
+
+        return net, x_test, y_test
+	
+	
     # # reproducable results
     # seed = 1
     # set_seed(seed)
@@ -251,10 +360,18 @@ def pass_arg(Xx, nsim, nobs):
     wght_decay, p_drop, learn_rate = 1e-3, 0.1, 5e-3
     train_data_ratio, nb_units, nb_epochs = nobs/data.shape[0], 5, 400
 
-    net, x_tst, y_tst = train_mc_dropout(data=data, drop_prob=p_drop, num_epochs=nb_epochs, 
-                                         ratio_train_data=train_data_ratio, num_units=nb_units, learn_rate=learn_rate, 
-                                         weight_decay=wght_decay, num_samples=10, log_every=100)
+    # net, x_tst, y_tst = train_mc_dropout(data=data, drop_prob=p_drop, num_epochs=nb_epochs, 
+                                         # ratio_train_data=train_data_ratio, num_units=nb_units, learn_rate=learn_rate, 
+                                         # weight_decay=wght_decay, num_samples=3, log_every=100)
 
+    plot_history = False # plot loss and rmse vs epochs if True
+    data_train = data[:int(nobs),:]
+
+    # Build the network, K-fold
+    net, x_tst, y_tst = train_mc_dropout_Kfold(data=data_train, drop_prob=p_drop, num_epochs=nb_epochs,
+                                           n_splits=3, num_units=nb_units,
+                                           learn_rate=learn_rate,
+                                           weight_decay=wght_decay, num_samples=3, log_every=100, plot_history=plot_history)
 
 #     #--------------------------------------#
 #     # sobol samples & candidate points
@@ -285,7 +402,7 @@ def pass_arg(Xx, nsim, nobs):
     x_pred = torch.tensor(Xx_np.astype(np.float32)) # convert to torch tensor
 
     samples = []
-    for i in range(10):
+    for i in range(int(nsim)):
         preds = net.network.forward(x_pred).cpu().data.numpy()
         samples.append(preds[:,np.newaxis])
 
