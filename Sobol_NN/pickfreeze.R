@@ -1,4 +1,12 @@
 sobolpickfreeze <- function(y1,y2,nboot){
+    # mm <-apply(y1,1,mean)
+	# nn <- apply(y1,1,mean)*apply(y2,1,mean)
+    # cat(mm,nn,"\n")
+	# cat("nom",mm-nn,"\n")
+	# cat("denom",apply(y1,1,var),"\n")
+	# oo <- (apply(y1*y2,1,mean) - apply(y1,1,mean)*apply(y2,1,mean))/apply(y1,1,var)
+	# cat("out:",oo,"\n")
+	# cat("mean:",mean(oo))
 	output <- (apply(y1*y2,1,mean) - apply(y1,1,mean)*apply(y2,1,mean))/apply(y1,1,var)
 	if(nboot > 1){
 		n <- dim(y1)[2]

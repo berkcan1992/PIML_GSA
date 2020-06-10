@@ -86,7 +86,8 @@ if(MCmethod!="sobol2007"){
 
         source_python(filename)
 	    ysimu <- pass_arg(X, nsim, nobs)
-	    
+		# cat(ysimu,"\n")
+		# cat(ncol(ysimu),nrow(ysimu))
 	if(MCmethod=="sobol"||MCmethod=="sobol2002"){
 	  	S[[i]] <- sobolpickfreeze(ysimu[,1:(nX/2)] , ysimu[,(nX/2+1):nX],nboot)
 	}
@@ -144,8 +145,10 @@ if(MCmethod!="sobol2007"){
 			
 		rm(list=c("Xb"))
 	
-		  ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
-	                            cond=TRUE, checkNames=FALSE, max_iter=1000,type)
+          source_python(filename)
+          ysimu <- pass_arg(X, nsim, nobs)
+		  # ysimu <- simulateGP.sobol(object = model, nsim = nsim,  newdata=X, 
+	                            # cond=TRUE, checkNames=FALSE, max_iter=1000,type)
 	
 		if(MCmethod=="sobol2002"){ 
 			STot[[i]] <- sobolT2002pickfreeze(ysimu[,1:(nX/2)],ysimu[,(nX/2+1):nX],nboot)

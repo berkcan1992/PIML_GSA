@@ -131,11 +131,11 @@ def pass_arg(Xx, nsim, tr_size):
     def PGNN_train_test(optimizer_name, optimizer_val, drop_rate, iteration, n_layers, n_nodes, tr_size, lamda, reg):
 
         # Hyper-parameters of the training process
-    #     batch_size = int(tr_size/2)
-        batch_size = 5
-        num_epochs = 100
-        val_frac = 0.2
-        patience_val = 50
+        # batch_size = int(tr_size/2)
+        batch_size = 1
+        num_epochs = 300
+        val_frac = 0.25
+        patience_val = 80
 
         # Initializing results filename
         exp_name = optimizer_name + '_drop' + str(drop_rate) + '_nL' + str(n_layers) + '_nN' + str(n_nodes) + '_trsize' + str(tr_size) + '_iter' + str(iteration)
@@ -159,7 +159,7 @@ def pass_arg(Xx, nsim, tr_size):
         scaler = preprocessing.MinMaxScaler(feature_range=(0, 1.0))
     #     scaler = preprocessing.StandardScaler()
         x_labeled = scaler.fit_transform(x_labeled)
-    #     y_labeled = scaler.fit_transform(y_labeled)
+        # y_labeled = scaler.fit_transform(y_labeled)
 
         # train and test data
         trainX, trainY = x_labeled[:tr_size,:], y_labeled[:tr_size]
@@ -240,7 +240,7 @@ def pass_arg(Xx, nsim, tr_size):
     # Main Function
     if __name__ == '__main__':
 
-        fix_seeds(1)
+        # fix_seeds(1)
 
         # List of optimizers to choose from    
         optimizer_names = ['Adagrad', 'Adadelta', 'Adam', 'Nadam', 'RMSprop', 'SGD', 'NSGD']
@@ -252,9 +252,9 @@ def pass_arg(Xx, nsim, tr_size):
         optimizer_val = optimizer_vals[optimizer_num]
 
         # Selecting Other Hyper-parameters
-        drop_rate = 0 # Fraction of nodes to be dropped out
+        drop_rate = 0.01 # Fraction of nodes to be dropped out
         n_layers = 2 # Number of hidden layers
-        n_nodes = 10 # Number of nodes per hidden layer
+        n_nodes = 5 # Number of nodes per hidden layer
 
         # # Iterating over different training fractions and splitting indices for train-test splits
         # trsize_range = [4,6,8,10,20]

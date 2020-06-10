@@ -95,10 +95,10 @@ def pass_arg(Xx, nsim, tr_size):
 
         # Hyper-parameters of the training process
     #     batch_size = tr_size
-        batch_size = 2
-        num_epochs = 600
-        val_frac = 0.2
-        patience_val = 50
+        batch_size = 1
+        num_epochs = 300
+        val_frac = 0.25
+        patience_val = 80
 
         # Initializing results filename
         exp_name = "DNN_loss" + optimizer_name + '_drop' + str(drop_frac) + '_usePhy' + str(use_YPhy) +  '_nL' + str(n_layers) + '_nN' + str(n_nodes) + '_trsize' + str(tr_size) + '_lamda' + str(lamda) + '_iter' + str(iteration)
@@ -147,6 +147,7 @@ def pass_arg(Xx, nsim, tr_size):
     #     scaler = preprocessing.StandardScaler()
         x_labeled = scaler.fit_transform(x_labeled)
         x_unlabeled = scaler.fit_transform(x_unlabeled)
+        # y_labeled = scaler.fit_transform(y_labeled)
 
     #     # initial porosity & physics outputs are removed
     #     x_unlabeled = x_unlabeled[:, :-3]
@@ -277,10 +278,10 @@ def pass_arg(Xx, nsim, tr_size):
         optimizer_val = optimizer_vals[optimizer_num]
 
         # Selecting Other Hyper-parameters
-        drop_frac = 0 # Fraction of nodes to be dropped out
+        drop_frac = 0.01 # Fraction of nodes to be dropped out
         use_YPhy = 1 # Whether YPhy is used as another feature in the NN model or not
         n_layers = 2 # Number of hidden layers
-        n_nodes = 10 # Number of nodes per hidden layer
+        n_nodes = 5 # Number of nodes per hidden layer
 
         #set lamda
         lamda = [0.3, 0.15, 0.008, 0] # Physics-based regularization constant  
