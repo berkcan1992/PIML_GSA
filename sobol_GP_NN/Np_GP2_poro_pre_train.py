@@ -6,24 +6,24 @@ from numpy.linalg import cholesky, det, lstsq
 from scipy.optimize import minimize
 import scipy.spatial.distance as spdist
 
-def pass_arg(Xx, nsim, tr_size):
+def Gp_phy():
 
-    print("tr_Size:",tr_size)
-    # Load labeled data
-    data = np.loadtxt('../data/labeled_data.dat')
-    x_labeled = data[:, :2].astype(np.float64) # -2 because we do not need porosity predictions
-    y_labeled = data[:, -2:-1].astype(np.float64) # dimensionless bond length and porosity measurements
+    # Physics data
+    data_phyloss = np.loadtxt('../data/unlabeled_data_BK_constw_v2_1525.dat')
+    x_unlabeled = data_phyloss[:, :]
+
+    x_unlabeled1 = x_unlabeled[:1303, :2]
+    x_unlabeled2 = x_unlabeled[-6:, :2]
+    y_unlabeled1 = data_phyloss[:1303, -2:-1]
+    y_unlabeled2 = data_phyloss[-6:, -2:-1]
+
+    x_unlabeled = np.vstack((x_unlabeled1,x_unlabeled2))
+    y_unlabeled = np.vstack((y_unlabeled1,y_unlabeled2))
 
     # normalize dataset with MinMaxScaler
     scaler = preprocessing.MinMaxScaler(feature_range=(0.0, 1.0))
-    x_labeled = scaler.fit_transform(x_labeled)
-    # y_labeled = scaler.fit_transform(y_labeled)
+    x_unlabeled = scaler.fit_transform(x_unlabeled)
 
-    tr_size = int(tr_size)
-
-    # train and test data
-    trainX, trainY = x_labeled[:tr_size,:], y_labeled[:tr_size]
-    
     def covSEard(hyp=None, x=None, z=None):
         ''' Squared Exponential covariance function with Automatic Relevance Detemination
          (ARD) distance measure. The covariance function is parameterized as:
@@ -44,18 +44,15 @@ def pass_arg(Xx, nsim, tr_size):
 
         [n, D] = x.shape
         ell = 1/np.array(hyp[0:D])        # characteristic length scale
-        
-        
         sf2 = np.array(hyp[D])**2         # signal variance
         tmp = np.dot(np.diag(ell),x.T).T
         A = spdist.cdist(np.dot(np.diag(ell),x.T).T, np.dot(np.diag(ell),z.T).T, 'sqeuclidean') # cross covariances
-
         A = sf2*np.exp(-0.5*A)  
 
         return A
 
 
-    def posterior_predictive(X_s, X_train, Y_train, l1=.1, l2=.1, sigma_f=.1, sigma_y=1e-5):
+    def posterior_predictive(X_s, X_train, Y_train, l1=.1, l2=.1, sigma_f=.1, sigma_y=0):
         '''  
         Computes the suffifient statistics of the GP posterior predictive distribution 
         from m training data X_train and Y_train and n new inputs X_s.
@@ -71,8 +68,6 @@ def pass_arg(Xx, nsim, tr_size):
         Returns:
             Posterior mean vector (n x d) and covariance matrix (n x n).
         '''
-
-
         K = covSEard(hyp=[l1,l2,sigma_f], x=X_train, z=X_train) + sigma_y**2 * np.eye(len(X_train))
         K_s = covSEard(hyp=[l1,l2,sigma_f], x=X_train, z=X_s)
         K_ss = covSEard(hyp=[l1,l2,sigma_f], x=X_s, z=X_s)  + 1e-8 * np.eye(len(X_s))
@@ -110,7 +105,7 @@ def pass_arg(Xx, nsim, tr_size):
             # in http://www.gaussianprocess.org/gpml/chapters/RW2.pdf, Section
             # 2.2, Algorithm 2.1.
             K = covSEard(hyp=[theta[0],theta[1],theta[2]], x=X_train, z=X_train) + \
-                theta[3]**2 * np.eye(len(X_train))
+                noise**2 * np.eye(len(X_train))
             
             K += 1e-6 * np.eye(*K.shape)
             L = cholesky(K)
@@ -122,18 +117,13 @@ def pass_arg(Xx, nsim, tr_size):
             return nll_naive
         else:
             return nll_stable
-
     
-    # Optimization
-    res = minimize(nll_fn(trainX, trainY), x0 = [.1, .1, .1, 1e-3], 
-                   bounds=((1e-5, None), (1e-5, None), (1e-5, None), (1e-7, None)),
+    # Optimization - GP1 - for physics
+    res1 = minimize(nll_fn(x_unlabeled, y_unlabeled), x0 = [.1, .1, .1], 
+                   bounds=((1e-5, None), (1e-5, None), (1e-5, None)),
                     method='L-BFGS-B')
     
-#     print(f'After parameter optimization: l1={res.x[0]:.5f} l2={res.x[1]:.5f} sigma_f={res.x[2]:.5f}')
-#     print(np.exp(res.x[0]),np.exp(res.x[1]), np.exp(res.x[2]))
-    mu_s, cov_s = posterior_predictive(Xx, trainX, trainY, *res.x)
+    # GP (physics) predictions for the physics sets
+    mu_phy, cov_phy = posterior_predictive(x_unlabeled, x_unlabeled, y_unlabeled, *res1.x)
     
-    samples = np.random.multivariate_normal(mu_s.ravel(), cov_s, int(nsim))
-#     print("RMSE:", root_mean_squared_error(testY, samples))
-
-    return samples
+    return [res1, mu_phy]

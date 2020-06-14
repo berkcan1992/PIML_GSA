@@ -76,19 +76,13 @@ def pass_arg(Xx, nsim, tr_size):
         
         sf2 = np.array(hyp[D])**2         # signal variance
         tmp = np.dot(np.diag(ell),x.T).T
-        
-        if z == 'itself':
-            tmp = np.dot(np.diag(ell),x.T).T
-            A = spdist.cdist(tmp, tmp, 'sqeuclidean')
-        else:                           # compute covariance between data sets x and z
-            A = spdist.cdist(np.dot(np.diag(ell),x.T).T, np.dot(np.diag(ell),z.T).T, 'sqeuclidean') # cross covariances
-
+        A = spdist.cdist(np.dot(np.diag(ell),x.T).T, np.dot(np.diag(ell),z.T).T, 'sqeuclidean') # cross covariances
         A = sf2*np.exp(-0.5*A)  
 
         return A
 
 
-    def posterior_predictive(X_s, X_train, Y_train, l1=.1, l2=.1, sigma_f=.1, sigma_y=0):
+    def posterior_predictive(X_s, X_train, Y_train, l1=.1, l2=.1, sigma_f=.1, sigma_y=1e-5):
         '''  
         Computes the suffifient statistics of the GP posterior predictive distribution 
         from m training data X_train and Y_train and n new inputs X_s.
@@ -106,9 +100,9 @@ def pass_arg(Xx, nsim, tr_size):
         '''
 
 
-        K = covSEard(hyp=[l1,l2,sigma_f], x=X_train, z='itself') + sigma_y**2 * np.eye(len(X_train))
+        K = covSEard(hyp=[l1,l2,sigma_f], x=X_train, z=X_train) + sigma_y**2 * np.eye(len(X_train))
         K_s = covSEard(hyp=[l1,l2,sigma_f], x=X_train, z=X_s)
-        K_ss = covSEard(hyp=[l1,l2,sigma_f], x=X_s, z='itself')  + 1e-8 * np.eye(len(X_s))
+        K_ss = covSEard(hyp=[l1,l2,sigma_f], x=X_s, z=X_s)  + 1e-8 * np.eye(len(X_s))
 #         K_inv = inv(K)
         K_inv = np.linalg.pinv(K)
     
@@ -121,7 +115,7 @@ def pass_arg(Xx, nsim, tr_size):
         return mu_s, cov_s
 
 
-    def nll_fn(X_train, Y_train, x_unlabeled, init_poro, noise=0, naive=False):
+    def nll_fn(X_train, Y_train, x_unlabeled, init_poro, naive=False):
         '''
         Returns a function that computes the negative log marginal
         likelihood for training data X_train and Y_train and given 
@@ -143,14 +137,14 @@ def pass_arg(Xx, nsim, tr_size):
             # in http://www.gaussianprocess.org/gpml/chapters/RW2.pdf, Section
             # 2.2, Algorithm 2.1.
             K = covSEard(hyp=[theta[0],theta[1],theta[2]], x=X_train, z=X_train) + \
-                noise**2 * np.eye(len(X_train))
+                theta[3]**2 * np.eye(len(X_train))
             
             
-            K += 1e-8 * np.eye(*K.shape)
+            K += 1e-6 * np.eye(*K.shape)
             L = cholesky(K)
         
 
-            mu_un, _ = posterior_predictive(x_unlabeled, X_train, Y_train, l1=theta[0], l2=theta[1], sigma_f=theta[2])
+            mu_un, _ = posterior_predictive(x_unlabeled, X_train, Y_train, l1=theta[0], l2=theta[1], sigma_f=theta[2], sigma_y=theta[3])
             phyloss_poro = np.mean(poros(init_poro, mu_un))
 
             log_loss = np.sum(np.log(np.diagonal(L))) + \
@@ -167,8 +161,8 @@ def pass_arg(Xx, nsim, tr_size):
 
     
     # Optimization
-    res = minimize(nll_fn(trainX, trainY, x_unlabeled, init_poro), x0 = [.1, .1, .1], 
-                   bounds=((1e-5, None), (1e-5, None), (1e-5, None)),
+    res = minimize(nll_fn(trainX, trainY, x_unlabeled, init_poro), x0 = [.1, .1, .1, 1e-3], 
+                   bounds=((1e-5, None), (1e-5, None), (1e-5, None),(1e-7, None)),
                     method='L-BFGS-B')
     
 #     print(f'After parameter optimization: l1={res.x[0]:.5f} l2={res.x[1]:.5f} sigma_f={res.x[2]:.5f}')
