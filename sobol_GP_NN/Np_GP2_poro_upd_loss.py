@@ -228,7 +228,7 @@ def pass_arg_loss(Xx, nsim, tr_size, res1, mu_phy):
                    0.5 * len(X_train) * np.log(2*np.pi)
         
             # print(500000*phyloss_poro,log_loss, theta)
-            return 500000*phyloss_poro + log_loss
+            return 5e7*phyloss_poro + log_loss
         
         
 
