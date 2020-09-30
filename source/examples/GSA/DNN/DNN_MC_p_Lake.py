@@ -9,6 +9,7 @@ from keras import backend as K
 from keras.losses import mean_squared_error
 import tensorflow as tf
 
+from sklearn.model_selection import train_test_split
 # Normalize the data.
 from keras.regularizers import l1_l2
 
@@ -65,10 +66,13 @@ def pass_arg(Xx, nsim, tr_size):
         Xc = mat['Xc_doy']
         Y = mat['Y']
         Xc = Xc[:,:-1] # remove Y_phy, physics model outputs
-        
         # train and test data
-        trainX, trainY = Xc[:tr_size,:], Y[:tr_size]
-        testX, testY = Xc[-50:,:], Y[-50:]
+        trainX, testX, trainY, testY = train_test_split(Xc, Y, train_size=tr_size/Xc.shape[0], 
+                                                    test_size=tr_size/Xc.shape[0], random_state=42, shuffle=True)
+
+        ## train and test data
+        #trainX, trainY = Xc[:tr_size,:], Y[:tr_size]
+        #testX, testY = Xc[-50:,:], Y[-50:]
 
         # Creating the model
         model = Sequential()
@@ -101,8 +105,8 @@ def pass_arg(Xx, nsim, tr_size):
 
         # scale the uniform numbers to original space
         # max and min value in each column 
-        max_in_column_Xc = np.max(Xc,axis=0)
-        min_in_column_Xc = np.min(Xc,axis=0)
+        max_in_column_Xc = np.max(trainX,axis=0)
+        min_in_column_Xc = np.min(trainX,axis=0)
         
         # Xc_scaled = (Xc-min_in_column_Xc)/(max_in_column_Xc-min_in_column_Xc)
         Xc_org = Xx*(max_in_column_Xc-min_in_column_Xc) + min_in_column_Xc

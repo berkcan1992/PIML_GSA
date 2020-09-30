@@ -15,7 +15,7 @@ conf = 0.95,
 sequential = FALSE, 
 candidate = NULL, 
 sequential.tot=FALSE,
-max_iter = 1000,
+max_iter = 100,
 filename="NP_GP_loss_poro.py",
 nobs = 10
 )
