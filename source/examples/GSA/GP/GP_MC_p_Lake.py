@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
 def pass_arg(Xx, nsim, tr_size):
 
     print("tr_Size:",tr_size)
@@ -22,16 +23,19 @@ def pass_arg(Xx, nsim, tr_size):
     Xc = mat['Xc_doy']
     Y = mat['Y']
     Xc = Xc[:,:-1]
+    scaler = preprocessing.StandardScaler()
+
     # train and test data
     trainX, testX, trainY, testY = train_test_split(Xc, Y, train_size=tr_size/Xc.shape[0], 
                                                     test_size=tr_size/Xc.shape[0], random_state=42, shuffle=True)
 
-    ## train and test data
-    #trainX, trainY = Xc[:tr_size,:-1], Y[:tr_size]
-    #testX, testY = Xc[-50:,:-1], Y[-50:]
+    trainY=trainY[:,np.newaxis]
+    #trainX = scaler.fit_transform(trainX)
+    #trainY = scaler.fit_transform(trainY)
     
-    kernel = C(5.0, (0.5, 1e1)) * RBF(length_scale = [1] * trainX.shape[1], length_scale_bounds=(1e-1, 1e7))
-    gp = GaussianProcessRegressor(kernel=kernel, alpha =1.5, n_restarts_optimizer=10)
+    
+    kernel = C(5.0, (0.1, 1e2)) * RBF(length_scale = [1] * trainX.shape[1], length_scale_bounds=(1e-1, 1e15))
+    gp = GaussianProcessRegressor(kernel=kernel, alpha =.1, n_restarts_optimizer=10)
     gp.fit(trainX, trainY)
     #y_pred1, sigma1 = gp.predict(testX, return_std=True)
     
@@ -43,6 +47,6 @@ def pass_arg(Xx, nsim, tr_size):
     # Xc_scaled = (Xc-min_in_column_Xc)/(max_in_column_Xc-min_in_column_Xc)
     Xc_org = Xx*(max_in_column_Xc-min_in_column_Xc) + min_in_column_Xc
         
-        
+    print(gp.kernel_)
     samples = gp.sample_y(Xc_org, n_samples=int(nsim)).T
-    return samples
+    return np.squeeze(samples)
